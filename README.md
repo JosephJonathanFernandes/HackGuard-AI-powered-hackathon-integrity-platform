@@ -14,9 +14,15 @@ accuses, it flags.
 - **FastAPI backend** (`backend/main.py`) — `/analyze` endpoint wrapping the
   analyzer.
 - **Judge Dashboard** (`frontend/index.html`) — single static page, no build
-  step. Enter a repo URL + hackathon window, get a risk score, per-signal
-  evidence breakdown, and a commit timeline chart (red = before the window,
-  green = inside it).
+  step, two tabs:
+  - *Single Repo* — enter a repo URL + hackathon window, get a risk score,
+    per-signal evidence breakdown, and a commit timeline chart (red = before
+    the window, green = inside it).
+  - *Team Leaderboard* — enter multiple teams (name + repo URL) against one
+    shared hackathon window, analyzed in parallel via a thread pool. Ranked by
+    risk score descending; a broken repo URL for one team shows as an inline
+    error instead of failing the whole batch. Click any row to expand the full
+    signal breakdown + timeline for that team.
 
 ## Deliberately cut from this pass (see original pitch)
 
@@ -54,7 +60,7 @@ to avoid unauthenticated API rate limits (60 req/hr without one).
 
 1. Test against 3–5 real repos with known-good and known-bad timing to tune
    signal weights.
-2. Add a `/teams` batch endpoint + leaderboard view for the full judge
-   dashboard (currently single-repo lookup only).
-3. Sketch the PPT similarity checker as a separate service once you have a
+2. Sketch the PPT similarity checker as a separate service once you have a
    sample deck corpus to test against.
+3. Add CSV import for the team list on the leaderboard tab, so organizers can
+   paste in a submission spreadsheet instead of typing rows by hand.

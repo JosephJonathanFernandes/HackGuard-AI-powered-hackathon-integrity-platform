@@ -15,18 +15,26 @@
   header { padding: 24px 32px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
   header h1 { font-size: 18px; margin:0; letter-spacing:.3px; }
   header h1 span { color: var(--accent); }
-  main { max-width: 980px; margin: 0 auto; padding: 32px; }
-  .form-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 8px; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px; }
+  .tabs { display:flex; gap: 4px; margin-bottom: 4px; }
+  .tab-btn { background: transparent; color: var(--muted); border:1px solid var(--border); padding: 9px 16px; border-radius: 8px 8px 0 0; font-size: 13px; cursor:pointer; border-bottom:none; }
+  .tab-btn.active { background: var(--panel); color: var(--text); font-weight:600; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  .form-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 8px; align-items:flex-end; }
   label { font-size: 12px; color: var(--muted); display:block; margin-bottom: 4px; }
-  input { background: var(--panel); border:1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13px; width: 100%; }
-  input[type=url] { flex: 2; min-width: 260px; }
+  input { background: var(--bg); border:1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13px; width: 100%; }
+  input[type=url], input[type=text] { flex: 2; min-width: 200px; }
   input[type=datetime-local] { flex: 1; min-width: 180px; }
   .field { flex:1; min-width: 180px; }
   button { background: var(--accent); color: #0f1117; border:none; padding: 11px 20px; border-radius: 8px; font-weight:600; font-size: 13px; cursor:pointer; margin-top: 4px; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 7px 14px; }
+  button.tiny { padding: 5px 10px; font-size: 12px; margin-top:0; }
   button:disabled { opacity: .5; cursor: default; }
-  .card { background: var(--panel); border:1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 24px; }
+  .card { background: var(--panel); border:1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 0; }
   .score-row { display:flex; align-items:center; gap: 24px; }
   .score-circle { width: 96px; height:96px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size: 26px; font-weight:700; flex-shrink:0; border: 4px solid; }
+  .score-circle.small { width:44px; height:44px; font-size:15px; border-width:3px; }
   .band { font-weight:600; font-size: 15px; }
   .disclaimer { font-size: 12px; color: var(--muted); margin-top: 10px; line-height:1.5; border-left: 2px solid var(--border); padding-left: 10px; }
   .signal { border-bottom: 1px solid var(--border); padding: 14px 0; }
@@ -39,8 +47,21 @@
   .bar-bg { height: 5px; background:#232636; border-radius:3px; margin-top:8px; overflow:hidden; }
   .bar-fill { height:100%; border-radius:3px; }
   h2 { font-size: 14px; text-transform:uppercase; letter-spacing:.5px; color: var(--muted); margin: 0 0 14px; }
-  #status { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 18px; }
+  #status, #batchStatus { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 18px; }
   canvas { max-height: 340px; }
+  .stack { display:flex; flex-direction:column; gap: 20px; }
+  .team-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+  .team-row input[type=text] { flex:1; }
+  .team-row input[type=url] { flex:2; }
+  table { width:100%; border-collapse: collapse; }
+  th { text-align:left; font-size: 11px; text-transform:uppercase; letter-spacing:.4px; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  tr.team-summary-row { cursor: pointer; }
+  tr.team-summary-row:hover { background: #1c2030; }
+  .band-pill { font-size: 11px; font-weight:600; padding: 3px 8px; border-radius: 20px; display:inline-block; }
+  .error-text { color: var(--red); font-size: 12px; }
+  .detail-row td { padding: 0; }
+  .detail-inner { padding: 20px; background: #12141c; border-bottom: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -49,50 +70,103 @@
   <div style="font-size:12px;color:var(--muted)">Risk scoring, not verdicts</div>
 </header>
 <main>
-  <div class="card">
-    <h2>Analyze a submission</h2>
-    <div class="form-row">
-      <input id="repoUrl" type="url" placeholder="https://github.com/team/repo" value="https://github.com/octocat/Hello-World">
-    </div>
-    <div class="form-row">
-      <div class="field">
-        <label>Hackathon start</label>
-        <input id="hackStart" type="datetime-local">
-      </div>
-      <div class="field">
-        <label>Hackathon end</label>
-        <input id="hackEnd" type="datetime-local">
-      </div>
-      <div class="field">
-        <label>GitHub token (optional, avoids rate limits)</label>
-        <input id="ghToken" type="password" placeholder="ghp_...">
-      </div>
-    </div>
-    <button id="analyzeBtn" onclick="runAnalysis()">Analyze Repository</button>
-    <div id="status"></div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnSingle" onclick="switchTab('single')">Single Repo</button>
+    <button class="tab-btn" id="tabBtnBatch" onclick="switchTab('batch')">Team Leaderboard</button>
   </div>
 
-  <div id="results" style="display:none;">
-    <div class="card">
-      <h2>Risk Score</h2>
-      <div class="score-row">
-        <div id="scoreCircle" class="score-circle">--</div>
-        <div>
-          <div id="bandText" class="band">--</div>
-          <div id="repoLabel" style="font-size:12px;color:var(--muted);margin-top:4px;">--</div>
+  <!-- SINGLE REPO TAB -->
+  <div class="tab-panel active" id="panelSingle">
+    <div class="stack">
+      <div class="card">
+        <h2>Analyze a submission</h2>
+        <div class="form-row">
+          <input id="repoUrl" type="url" placeholder="https://github.com/team/repo" value="https://github.com/octocat/Hello-World">
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Hackathon start</label>
+            <input id="hackStart" type="datetime-local">
+          </div>
+          <div class="field">
+            <label>Hackathon end</label>
+            <input id="hackEnd" type="datetime-local">
+          </div>
+          <div class="field">
+            <label>GitHub token (optional, avoids rate limits)</label>
+            <input id="ghToken" type="password" placeholder="ghp_...">
+          </div>
+        </div>
+        <button id="analyzeBtn" onclick="runAnalysis()">Analyze Repository</button>
+        <div id="status"></div>
+      </div>
+
+      <div id="results" style="display:none;">
+        <div class="stack">
+          <div class="card">
+            <h2>Risk Score</h2>
+            <div class="score-row">
+              <div id="scoreCircle" class="score-circle">--</div>
+              <div>
+                <div id="bandText" class="band">--</div>
+                <div id="repoLabel" style="font-size:12px;color:var(--muted);margin-top:4px;">--</div>
+              </div>
+            </div>
+            <div id="disclaimer" class="disclaimer"></div>
+          </div>
+
+          <div class="card">
+            <h2>Signal Breakdown</h2>
+            <div id="signals"></div>
+          </div>
+
+          <div class="card">
+            <h2>Commit Timeline</h2>
+            <canvas id="timelineChart"></canvas>
+          </div>
         </div>
       </div>
-      <div id="disclaimer" class="disclaimer"></div>
     </div>
+  </div>
 
-    <div class="card">
-      <h2>Signal Breakdown</h2>
-      <div id="signals"></div>
-    </div>
+  <!-- BATCH / LEADERBOARD TAB -->
+  <div class="tab-panel" id="panelBatch">
+    <div class="stack">
+      <div class="card">
+        <h2>Teams</h2>
+        <div id="teamRows"></div>
+        <button class="secondary tiny" onclick="addTeamRow()">+ Add team</button>
 
-    <div class="card">
-      <h2>Commit Timeline</h2>
-      <canvas id="timelineChart"></canvas>
+        <div class="form-row" style="margin-top:20px;">
+          <div class="field">
+            <label>Hackathon start</label>
+            <input id="batchHackStart" type="datetime-local">
+          </div>
+          <div class="field">
+            <label>Hackathon end</label>
+            <input id="batchHackEnd" type="datetime-local">
+          </div>
+          <div class="field">
+            <label>GitHub token (optional)</label>
+            <input id="batchGhToken" type="password" placeholder="ghp_...">
+          </div>
+        </div>
+        <button id="batchAnalyzeBtn" onclick="runBatchAnalysis()">Analyze All Teams</button>
+        <div id="batchStatus"></div>
+      </div>
+
+      <div class="card" id="leaderboardCard" style="display:none;">
+        <h2>Leaderboard</h2>
+        <table>
+          <thead>
+            <tr><th></th><th>Team</th><th>Risk</th><th>Band</th><th>Repo</th></tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+        <div class="disclaimer" style="margin-top:16px;">
+          Risk scores are for triage, not verdicts. Timestamps and history can be altered by a determined participant — use this to prioritize manual review.
+        </div>
+      </div>
     </div>
   </div>
 </main>
@@ -101,20 +175,35 @@
 const API_BASE = "http://localhost:8000";
 
 function colorForScore(score) {
+  if (score === null || score === undefined) return '#555a6b';
   if (score >= 65) return getComputedStyle(document.documentElement).getPropertyValue('--red').trim();
   if (score >= 35) return getComputedStyle(document.documentElement).getPropertyValue('--amber').trim();
   return getComputedStyle(document.documentElement).getPropertyValue('--green').trim();
+}
+
+function switchTab(tab) {
+  document.getElementById('panelSingle').classList.toggle('active', tab === 'single');
+  document.getElementById('panelBatch').classList.toggle('active', tab === 'batch');
+  document.getElementById('tabBtnSingle').classList.toggle('active', tab === 'single');
+  document.getElementById('tabBtnBatch').classList.toggle('active', tab === 'batch');
 }
 
 // default the datetime inputs to a sensible 24h window ending now
 (function initDefaults(){
   const now = new Date();
   const start = new Date(now.getTime() - 24*3600*1000);
-  document.getElementById('hackStart').value = start.toISOString().slice(0,16);
-  document.getElementById('hackEnd').value = now.toISOString().slice(0,16);
+  const s = start.toISOString().slice(0,16);
+  const e = now.toISOString().slice(0,16);
+  document.getElementById('hackStart').value = s;
+  document.getElementById('hackEnd').value = e;
+  document.getElementById('batchHackStart').value = s;
+  document.getElementById('batchHackEnd').value = e;
 })();
 
 let chart;
+let teamRowCount = 0;
+
+// ---------- SINGLE REPO ----------
 
 async function runAnalysis() {
   const btn = document.getElementById('analyzeBtn');
@@ -172,44 +261,40 @@ function renderResults(data) {
   document.getElementById('repoLabel').textContent = data.repo_url;
   document.getElementById('disclaimer').textContent = data.disclaimer;
 
-  const signalsEl = document.getElementById('signals');
-  signalsEl.innerHTML = '';
-  data.signals.forEach(s => {
-    const c = colorForScore(s.score);
-    const div = document.createElement('div');
-    div.className = 'signal';
-    div.innerHTML = `
-      <div class="signal-top">
-        <div class="signal-name">${s.name}</div>
-        <div class="signal-score" style="color:${c}">${Math.round(s.score)}</div>
-      </div>
-      <div class="signal-evidence">${s.evidence}</div>
-      <div class="signal-confidence">Reliability: ${s.confidence}</div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${s.score}%;background:${c}"></div></div>
-    `;
-    signalsEl.appendChild(div);
-  });
-
-  renderTimeline(data.timeline);
+  document.getElementById('signals').innerHTML = signalsHtml(data.signals);
+  renderTimeline(data.timeline, 'timelineChart');
 }
 
-function renderTimeline(timeline) {
-  const ctx = document.getElementById('timelineChart').getContext('2d');
-  if (chart) chart.destroy();
+function signalsHtml(signals) {
+  return signals.map(s => {
+    const c = colorForScore(s.score);
+    return `
+      <div class="signal">
+        <div class="signal-top">
+          <div class="signal-name">${s.name}</div>
+          <div class="signal-score" style="color:${c}">${Math.round(s.score)}</div>
+        </div>
+        <div class="signal-evidence">${s.evidence}</div>
+        <div class="signal-confidence">Reliability: ${s.confidence}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${s.score}%;background:${c}"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderTimeline(timeline, canvasId, chartRefSetter) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const existing = Chart.getChart(canvasId);
+  if (existing) existing.destroy();
 
   const labels = timeline.map(t => new Date(t.time).toLocaleString());
   const insertions = timeline.map(t => t.insertions);
   const colors = timeline.map(t => t.inside_window ? '#3ecf8e' : '#ef5b5b');
 
-  chart = new Chart(ctx, {
+  new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        label: 'Lines inserted per commit',
-        data: insertions,
-        backgroundColor: colors,
-      }]
+      datasets: [{ label: 'Lines inserted per commit', data: insertions, backgroundColor: colors }]
     },
     options: {
       responsive: true,
@@ -226,6 +311,132 @@ function renderTimeline(timeline) {
         y: { ticks: { color: '#8b90a3' }, grid: { color: '#232636' } }
       }
     }
+  });
+}
+
+// ---------- BATCH / LEADERBOARD ----------
+
+function addTeamRow(name = '', url = '') {
+  teamRowCount++;
+  const id = teamRowCount;
+  const container = document.getElementById('teamRows');
+  const row = document.createElement('div');
+  row.className = 'team-row';
+  row.id = `teamRow${id}`;
+  row.innerHTML = `
+    <input type="text" placeholder="Team name" value="${name}" id="teamName${id}">
+    <input type="url" placeholder="https://github.com/team/repo" value="${url}" id="teamRepo${id}">
+    <button class="secondary tiny" onclick="document.getElementById('teamRow${id}').remove()">Remove</button>
+  `;
+  container.appendChild(row);
+}
+
+// seed with two example rows
+addTeamRow('Team Octocat', 'https://github.com/octocat/Hello-World');
+addTeamRow('Team Second', '');
+
+async function runBatchAnalysis() {
+  const btn = document.getElementById('batchAnalyzeBtn');
+  const status = document.getElementById('batchStatus');
+  const hackStart = document.getElementById('batchHackStart').value;
+  const hackEnd = document.getElementById('batchHackEnd').value;
+  const ghToken = document.getElementById('batchGhToken').value.trim();
+
+  const teams = [];
+  document.querySelectorAll('#teamRows .team-row').forEach(row => {
+    const nameInput = row.querySelector('input[type=text]');
+    const urlInput = row.querySelector('input[type=url]');
+    const name = nameInput.value.trim();
+    const url = urlInput.value.trim();
+    if (name && url) teams.push({ team_name: name, repo_url: url });
+  });
+
+  if (!teams.length || !hackStart || !hackEnd) {
+    status.textContent = "Add at least one team (with name + repo URL) and set the hackathon window.";
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = `Analyzing ${teams.length} team(s) in parallel — this can take a bit...`;
+  document.getElementById('leaderboardCard').style.display = 'none';
+
+  try {
+    const resp = await fetch(`${API_BASE}/teams/analyze-batch`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        teams,
+        hackathon_start: new Date(hackStart).toISOString(),
+        hackathon_end: new Date(hackEnd).toISOString(),
+        github_token: ghToken || null,
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'Batch analysis failed');
+    }
+    const data = await resp.json();
+    renderLeaderboard(data.teams);
+    status.textContent = "";
+  } catch (e) {
+    status.textContent = "Error: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderLeaderboard(teams) {
+  document.getElementById('leaderboardCard').style.display = 'block';
+  const body = document.getElementById('leaderboardBody');
+  body.innerHTML = '';
+
+  teams.forEach((t, idx) => {
+    const summaryRow = document.createElement('tr');
+    summaryRow.className = 'team-summary-row';
+
+    if (t.error) {
+      summaryRow.innerHTML = `
+        <td>▸</td>
+        <td>${t.team_name}</td>
+        <td colspan="2"><span class="error-text">Analysis failed: ${t.error}</span></td>
+        <td style="color:var(--muted);font-size:12px;">${t.repo_url || ''}</td>
+      `;
+      body.appendChild(summaryRow);
+      return;
+    }
+
+    const color = colorForScore(t.risk_score);
+    summaryRow.innerHTML = `
+      <td>▸</td>
+      <td>${t.team_name}</td>
+      <td><div class="score-circle small" style="border-color:${color};color:${color}">${Math.round(t.risk_score)}</div></td>
+      <td><span class="band-pill" style="background:${color}22;color:${color}">${t.verdict_band}</span></td>
+      <td style="color:var(--muted);font-size:12px;">${t.repo_url}</td>
+    `;
+
+    const detailRow = document.createElement('tr');
+    detailRow.className = 'detail-row';
+    detailRow.style.display = 'none';
+    const canvasId = `batchChart${idx}`;
+    detailRow.innerHTML = `
+      <td colspan="5">
+        <div class="detail-inner stack">
+          <div>${signalsHtml(t.signals)}</div>
+          <canvas id="${canvasId}" style="max-height:280px;"></canvas>
+        </div>
+      </td>
+    `;
+
+    let expanded = false;
+    summaryRow.onclick = () => {
+      expanded = !expanded;
+      detailRow.style.display = expanded ? 'table-row' : 'none';
+      summaryRow.firstElementChild.textContent = expanded ? '▾' : '▸';
+      if (expanded) renderTimeline(t.timeline, canvasId);
+    };
+
+    body.appendChild(summaryRow);
+    body.appendChild(detailRow);
   });
 }
 </script>
