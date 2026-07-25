@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HackGuard — Judge Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a23; --border: #262a37;
+    --text: #e6e8ee; --muted: #8b90a3;
+    --green: #3ecf8e; --amber: #e8b83f; --red: #ef5b5b; --accent: #6d8dff;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 24px 32px; border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  header h1 { font-size: 18px; margin:0; letter-spacing:.3px; }
+  header h1 span { color: var(--accent); }
+  main { max-width: 980px; margin: 0 auto; padding: 32px; }
+  .form-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 8px; }
+  label { font-size: 12px; color: var(--muted); display:block; margin-bottom: 4px; }
+  input { background: var(--panel); border:1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 13px; width: 100%; }
+  input[type=url] { flex: 2; min-width: 260px; }
+  input[type=datetime-local] { flex: 1; min-width: 180px; }
+  .field { flex:1; min-width: 180px; }
+  button { background: var(--accent); color: #0f1117; border:none; padding: 11px 20px; border-radius: 8px; font-weight:600; font-size: 13px; cursor:pointer; margin-top: 4px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .card { background: var(--panel); border:1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 24px; }
+  .score-row { display:flex; align-items:center; gap: 24px; }
+  .score-circle { width: 96px; height:96px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size: 26px; font-weight:700; flex-shrink:0; border: 4px solid; }
+  .band { font-weight:600; font-size: 15px; }
+  .disclaimer { font-size: 12px; color: var(--muted); margin-top: 10px; line-height:1.5; border-left: 2px solid var(--border); padding-left: 10px; }
+  .signal { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .signal:last-child { border-bottom:none; }
+  .signal-top { display:flex; justify-content:space-between; align-items:baseline; gap: 12px; }
+  .signal-name { font-weight:600; font-size: 13px; }
+  .signal-score { font-size: 13px; font-weight:700; }
+  .signal-evidence { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height:1.5; }
+  .signal-confidence { font-size: 11px; color: var(--muted); margin-top: 3px; font-style: italic; }
+  .bar-bg { height: 5px; background:#232636; border-radius:3px; margin-top:8px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:3px; }
+  h2 { font-size: 14px; text-transform:uppercase; letter-spacing:.5px; color: var(--muted); margin: 0 0 14px; }
+  #status { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 18px; }
+  canvas { max-height: 340px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hack<span>Guard</span> — Judge Dashboard</h1>
+  <div style="font-size:12px;color:var(--muted)">Risk scoring, not verdicts</div>
+</header>
+<main>
+  <div class="card">
+    <h2>Analyze a submission</h2>
+    <div class="form-row">
+      <input id="repoUrl" type="url" placeholder="https://github.com/team/repo" value="https://github.com/octocat/Hello-World">
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Hackathon start</label>
+        <input id="hackStart" type="datetime-local">
+      </div>
+      <div class="field">
+        <label>Hackathon end</label>
+        <input id="hackEnd" type="datetime-local">
+      </div>
+      <div class="field">
+        <label>GitHub token (optional, avoids rate limits)</label>
+        <input id="ghToken" type="password" placeholder="ghp_...">
+      </div>
+    </div>
+    <button id="analyzeBtn" onclick="runAnalysis()">Analyze Repository</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="results" style="display:none;">
+    <div class="card">
+      <h2>Risk Score</h2>
+      <div class="score-row">
+        <div id="scoreCircle" class="score-circle">--</div>
+        <div>
+          <div id="bandText" class="band">--</div>
+          <div id="repoLabel" style="font-size:12px;color:var(--muted);margin-top:4px;">--</div>
+        </div>
+      </div>
+      <div id="disclaimer" class="disclaimer"></div>
+    </div>
+
+    <div class="card">
+      <h2>Signal Breakdown</h2>
+      <div id="signals"></div>
+    </div>
+
+    <div class="card">
+      <h2>Commit Timeline</h2>
+      <canvas id="timelineChart"></canvas>
+    </div>
+  </div>
+</main>
+
+<script>
+const API_BASE = "http://localhost:8000";
+
+function colorForScore(score) {
+  if (score >= 65) return getComputedStyle(document.documentElement).getPropertyValue('--red').trim();
+  if (score >= 35) return getComputedStyle(document.documentElement).getPropertyValue('--amber').trim();
+  return getComputedStyle(document.documentElement).getPropertyValue('--green').trim();
+}
+
+// default the datetime inputs to a sensible 24h window ending now
+(function initDefaults(){
+  const now = new Date();
+  const start = new Date(now.getTime() - 24*3600*1000);
+  document.getElementById('hackStart').value = start.toISOString().slice(0,16);
+  document.getElementById('hackEnd').value = now.toISOString().slice(0,16);
+})();
+
+let chart;
+
+async function runAnalysis() {
+  const btn = document.getElementById('analyzeBtn');
+  const status = document.getElementById('status');
+  const repoUrl = document.getElementById('repoUrl').value.trim();
+  const hackStart = document.getElementById('hackStart').value;
+  const hackEnd = document.getElementById('hackEnd').value;
+  const ghToken = document.getElementById('ghToken').value.trim();
+
+  if (!repoUrl || !hackStart || !hackEnd) {
+    status.textContent = "Fill in repo URL and hackathon window.";
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = "Cloning and analyzing repository — this can take a few seconds...";
+  document.getElementById('results').style.display = 'none';
+
+  try {
+    const resp = await fetch(`${API_BASE}/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        repo_url: repoUrl,
+        hackathon_start: new Date(hackStart).toISOString(),
+        hackathon_end: new Date(hackEnd).toISOString(),
+        github_token: ghToken || null,
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'Analysis failed');
+    }
+    const data = await resp.json();
+    renderResults(data);
+    status.textContent = "";
+  } catch (e) {
+    status.textContent = "Error: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderResults(data) {
+  document.getElementById('results').style.display = 'block';
+
+  const circle = document.getElementById('scoreCircle');
+  const color = colorForScore(data.risk_score);
+  circle.textContent = Math.round(data.risk_score);
+  circle.style.borderColor = color;
+  circle.style.color = color;
+
+  document.getElementById('bandText').textContent = data.verdict_band;
+  document.getElementById('bandText').style.color = color;
+  document.getElementById('repoLabel').textContent = data.repo_url;
+  document.getElementById('disclaimer').textContent = data.disclaimer;
+
+  const signalsEl = document.getElementById('signals');
+  signalsEl.innerHTML = '';
+  data.signals.forEach(s => {
+    const c = colorForScore(s.score);
+    const div = document.createElement('div');
+    div.className = 'signal';
+    div.innerHTML = `
+      <div class="signal-top">
+        <div class="signal-name">${s.name}</div>
+        <div class="signal-score" style="color:${c}">${Math.round(s.score)}</div>
+      </div>
+      <div class="signal-evidence">${s.evidence}</div>
+      <div class="signal-confidence">Reliability: ${s.confidence}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${s.score}%;background:${c}"></div></div>
+    `;
+    signalsEl.appendChild(div);
+  });
+
+  renderTimeline(data.timeline);
+}
+
+function renderTimeline(timeline) {
+  const ctx = document.getElementById('timelineChart').getContext('2d');
+  if (chart) chart.destroy();
+
+  const labels = timeline.map(t => new Date(t.time).toLocaleString());
+  const insertions = timeline.map(t => t.insertions);
+  const colors = timeline.map(t => t.inside_window ? '#3ecf8e' : '#ef5b5b');
+
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Lines inserted per commit',
+        data: insertions,
+        backgroundColor: colors,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: (item) => timeline[item.dataIndex].inside_window ? 'Inside hackathon window' : 'BEFORE hackathon window'
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#8b90a3', maxRotation: 60, minRotation: 60, font:{size:9} }, grid: { display:false } },
+        y: { ticks: { color: '#8b90a3' }, grid: { color: '#232636' } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
