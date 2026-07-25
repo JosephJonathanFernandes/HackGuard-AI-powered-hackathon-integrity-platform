@@ -135,7 +135,13 @@
       <div class="card">
         <h2>Teams</h2>
         <div id="teamRows"></div>
-        <button class="secondary tiny" onclick="addTeamRow()">+ Add team</button>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <button class="secondary tiny" onclick="addTeamRow()">+ Add team</button>
+          <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCsvUpload(event)">
+          <button class="secondary tiny" onclick="document.getElementById('csvFileInput').click()">Import CSV</button>
+          <a href="#" onclick="downloadSampleCsv(event)" style="font-size:12px; color:var(--accent); text-decoration:none;">Download sample CSV</a>
+        </div>
+        <div id="csvStatus" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
 
         <div class="form-row" style="margin-top:20px;">
           <div class="field">
@@ -334,6 +340,66 @@ function addTeamRow(name = '', url = '') {
 // seed with two example rows
 addTeamRow('Team Octocat', 'https://github.com/octocat/Hello-World');
 addTeamRow('Team Second', '');
+
+function downloadSampleCsv(e) {
+  e.preventDefault();
+  const csvContent = "team_name,repo_url\nTeam Octocat,https://github.com/octocat/Hello-World\nTeam Second,https://github.com/example/repo\n";
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'hackguard_teams_sample.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function handleCsvUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+      document.getElementById('csvStatus').textContent = "CSV appears empty or missing data.";
+      return;
+    }
+
+    const header = lines[0].toLowerCase().split(',').map(s => s.trim());
+    const nameIdx = header.indexOf('team_name');
+    const urlIdx = header.indexOf('repo_url');
+
+    if (nameIdx === -1 || urlIdx === -1) {
+      document.getElementById('csvStatus').textContent = "CSV must have 'team_name' and 'repo_url' columns.";
+      return;
+    }
+
+    document.getElementById('teamRows').innerHTML = '';
+    teamRowCount = 0;
+    let added = 0;
+    let skipped = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(s => s.trim());
+      const teamName = cols[nameIdx] || '';
+      const repoUrl = cols[urlIdx] || '';
+
+      if (repoUrl) {
+        addTeamRow(teamName, repoUrl);
+        added++;
+      } else {
+        skipped++;
+      }
+    }
+    
+    document.getElementById('csvStatus').textContent = `Imported ${added} team(s)${skipped > 0 ? `, skipped ${skipped} row(s) without a repo URL` : ''}.`;
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
 
 async function runBatchAnalysis() {
   const btn = document.getElementById('batchAnalyzeBtn');
