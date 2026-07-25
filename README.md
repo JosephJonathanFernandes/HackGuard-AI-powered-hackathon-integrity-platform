@@ -1,66 +1,54 @@
-# HackGuard — MVP
+# HackGuard
 
-Risk-scoring, not verdicts: analyzes a submitted GitHub repo against a declared
-hackathon time window and surfaces evidence for judges to review — it never
-accuses, it flags.
+HackGuard is a robust, modular risk-scoring engine designed to assist hackathon judges by identifying potential pre-existing work in submitted GitHub repositories. 
 
-## What's in this MVP
+> **Important**: HackGuard provides risk scores, not verdicts. It surfaces evidence for judges to review. It never accuses; it flags.
 
-- **Git Repository Analyzer** (`backend/analyzer.py`) — clones the repo, pulls
-  GitHub metadata (creation date, stars/forks), walks full commit history, and
-  scores 7 weighted signals: repo age, pre-existing stars/forks, first-commit
-  timing, commit distribution vs. the event window, large single-commit code
-  dumps, commit cadence realism, message quality, author spread.
-- **FastAPI backend** (`backend/main.py`) — `/analyze` endpoint wrapping the
-  analyzer.
-- **Judge Dashboard** (`frontend/index.html`) — single static page, no build
-  step, two tabs:
-  - *Single Repo* — enter a repo URL + hackathon window, get a risk score,
-    per-signal evidence breakdown, and a commit timeline chart (red = before
-    the window, green = inside it).
-  - *Team Leaderboard* — enter multiple teams (name + repo URL) against one
-    shared hackathon window, analyzed in parallel via a thread pool. Ranked by
-    risk score descending; a broken repo URL for one team shows as an inline
-    error instead of failing the whole batch. Click any row to expand the full
-    signal breakdown + timeline for that team.
+## The Problem
+Hackathons are built on the honor code. Unfortunately, some participants submit pre-existing work. HackGuard solves this by evaluating a repository's metadata and commit history against the declared event window, helping organizers triage submissions fairly and efficiently.
 
-## Deliberately cut from this pass (see original pitch)
+## Architecture & Tech Stack
+Built with modularity and extensibility in mind, HackGuard adheres to SOLID principles and GitGuardian security standards:
+- **FastAPI**: High-performance backend.
+- **Pydantic**: Strict data validation and settings management.
+- **GitPython & GitHub REST API**: Core engines for local git history parsing and remote metadata fetching.
+- **Vanilla JS/HTML/CSS**: Lightweight, zero-build-step frontend dashboard using Chart.js.
 
-- PPT reuse detector (needs a seeded corpus of past decks to compare against —
-  not buildable convincingly without real data)
-- VS Code telemetry extension (real signal, but its own multi-day build + needs
-  participant adoption)
-- Cross-repo AST/embedding similarity search
+For a deep dive into the system design, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Running it
+## Getting Started
 
+### Prerequisites
+- Python 3.10+
+- Git
+
+### Installation
 ```bash
-# backend
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+# Clone the repository
+git clone https://github.com/your-org/HackGuard.git
+cd HackGuard
 
-# frontend
-# just open frontend/index.html in a browser — it calls http://localhost:8000
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your GITHUB_TOKEN to avoid rate limits
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-Optional: pass a GitHub personal access token in the dashboard's token field
-to avoid unauthenticated API rate limits (60 req/hr without one).
+### Usage
+Start the backend server:
+```bash
+# Run using uvicorn and load from the src module
+set PYTHONPATH=src
+uvicorn hackguard.api.main:app --reload --port 8000
+```
+*(On Linux/macOS, use `export PYTHONPATH=src`)*
 
-## Known weaknesses (be upfront about these when you demo)
+Then, simply open `frontend/index.html` in your browser.
 
-- Git timestamps (`first commit`, `commit distribution`) are the *most
-  spoofable* signals — a participant can rewrite history with
-  `git commit --date`. They're intentionally weighted lower than harder-to-fake
-  signals like existing stars/forks.
-- No signal here can *prove* pre-existing work — see `disclaimer` field on
-  every API response. The product's value is triage, not judgment.
+## Security
+We take security seriously. Hardcoded secrets are strictly forbidden. Please refer to our [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
-## Suggested next build session
-
-1. Test against 3–5 real repos with known-good and known-bad timing to tune
-   signal weights.
-2. Sketch the PPT similarity checker as a separate service once you have a
-   sample deck corpus to test against.
-3. Add CSV import for the team list on the leaderboard tab, so organizers can
-   paste in a submission spreadsheet instead of typing rows by hand.
+## Contributing
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on code style, testing, and pull requests.
