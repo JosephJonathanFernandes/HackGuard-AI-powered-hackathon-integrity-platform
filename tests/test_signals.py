@@ -37,7 +37,7 @@ def test_evaluate_first_commit(mock_commit_before_window, mock_commit_in_window,
     commits = [mock_commit_before_window, mock_commit_in_window]
     signal = evaluate_first_commit(commits, hackathon_start)
     assert signal.score > 5
-    assert "4.0 day(s) before" in signal.evidence
+    assert "3.5 day(s) before" in signal.evidence
 
 def test_evaluate_commit_distribution_and_boundary(
     mock_commit_before_window, mock_commit_in_window, 

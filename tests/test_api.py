@@ -58,14 +58,14 @@ def test_batch_analyze_empty():
     assert response.json()["detail"] == "No teams provided"
 
 def test_batch_analyze_mixed_and_sorting():
-    with patch("hackguard.api.routes.analysis.RepoAnalyzer") as MockAnalyzer:
-        def side_effect(*args, **kwargs):
-            url = kwargs.get("repo_url")
+    with patch("hackguard.api.routes.analysis.RepoAnalyzer.run_analysis", autospec=True) as mock_run:
+        def side_effect(self):
+            url = self.repo_url
             if "fail" in url:
                 raise RuntimeError("Failed to clone")
             score = 90.0 if "high" in url else 10.0
             
-            mock_resp = AnalysisResultResponse(
+            return AnalysisResultResponse(
                 repo_url=url,
                 risk_score=score,
                 verdict_band="HIGH" if score > 50 else "LOW",
@@ -73,10 +73,8 @@ def test_batch_analyze_mixed_and_sorting():
                 timeline=[],
                 disclaimer="Disclaimer"
             )
-            return mock_resp
             
-        mock_instance = MockAnalyzer.return_value
-        mock_instance.run_analysis.side_effect = side_effect
+        mock_run.side_effect = side_effect
         
         response = client.post("/teams/analyze-batch", json={
             "teams": [
@@ -106,11 +104,11 @@ def test_batch_analyze_mixed_and_sorting():
 
 def test_batch_analyze_concurrency():
     # Test that the ThreadPoolExecutor actually parallelizes
-    with patch("hackguard.api.routes.analysis.RepoAnalyzer") as MockAnalyzer:
-        def slow_analysis(*args, **kwargs):
+    with patch("hackguard.api.routes.analysis.RepoAnalyzer.run_analysis", autospec=True) as mock_run:
+        def slow_analysis(self):
             time.sleep(0.1) # 100ms per analysis
             return AnalysisResultResponse(
-                repo_url=kwargs.get("repo_url"),
+                repo_url=self.repo_url,
                 risk_score=10.0,
                 verdict_band="LOW",
                 signals=[],
@@ -118,8 +116,7 @@ def test_batch_analyze_concurrency():
                 disclaimer="Disclaimer text"
             )
             
-        mock_instance = MockAnalyzer.return_value
-        mock_instance.run_analysis.side_effect = slow_analysis
+        mock_run.side_effect = slow_analysis
         
         # 8 teams * 0.1s = 0.8s if serial.
         # Max workers is min(8, len(teams)), so 8 workers.

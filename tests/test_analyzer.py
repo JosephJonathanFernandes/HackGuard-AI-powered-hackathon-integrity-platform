@@ -70,9 +70,10 @@ def test_weighted_score_math():
     
     analyzer = RepoAnalyzer("url", datetime.now(), datetime.now())
     # We mock run_analysis internals to return our exact signals
-    with patch("hackguard.core.analyzer.GithubClient"), \
+    with patch("hackguard.core.analyzer.GithubClient") as MockGH, \
          patch("hackguard.core.analyzer.GitClient") as mock_git:
          
+        MockGH.return_value.parse_repo_url.return_value = ("a", "b")
         mock_git.return_value.__enter__.return_value.get_commit_stats.return_value = [{"hexsha": "1", "dt": datetime.now(timezone.utc), "author": "dev", "message": "msg", "files_changed": 1, "insertions": 1, "deletions": 0}]
         
         # Override the signals list logic directly by patching the signal evaluations
