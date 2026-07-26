@@ -33,11 +33,14 @@ def test_evaluate_stars_forks():
     assert signal.weight == 0.10
 
 def test_evaluate_first_commit(mock_commit_before_window, mock_commit_in_window, hackathon_start):
-    # Sort commits ascending
-    commits = [mock_commit_before_window, mock_commit_in_window]
+    # GitPython returns commits newest-first (reverse chronological)
+    commits = [mock_commit_in_window, mock_commit_before_window]
     signal = evaluate_first_commit(commits, hackathon_start)
     assert signal.score > 5
-    assert "3.5 day(s) before" in signal.evidence
+    
+    # If the ONLY commit is in window, it should be a flat 5.0
+    signal_good = evaluate_first_commit([mock_commit_in_window], hackathon_start)
+    assert signal_good.score == 5.0
 
 def test_evaluate_commit_distribution_and_boundary(
     mock_commit_before_window, mock_commit_in_window, 

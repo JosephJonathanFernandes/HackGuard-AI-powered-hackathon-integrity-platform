@@ -46,7 +46,7 @@ def evaluate_stars_forks(stars: int, forks: int) -> SignalResponse | None:
     return None
 
 def evaluate_first_commit(commits: List[Dict[str, Any]], hackathon_start: datetime) -> SignalResponse:
-    first_commit_dt = commits[0]["dt"]
+    first_commit_dt = commits[-1]["dt"]
     days_before_first = (hackathon_start - first_commit_dt).total_seconds() / 86400
     if first_commit_dt < hackathon_start:
         s_score = min(100.0, max(0.0, 45 + days_before_first * 3))
@@ -71,7 +71,7 @@ def evaluate_commit_distribution(commits: List[Dict[str, Any]], hackathon_start:
     
     return SignalResponse(
         name="Commit distribution vs. event window",
-        weight=0.15, score=pct_before,
+        weight=0.25, score=pct_before,
         evidence=(
             f"{len(before_window)}/{len(commits)} commits ({pct_before:.0f}%) fall before "
             f"the hackathon start; {len(in_window)} fall inside the official window."
@@ -110,7 +110,7 @@ def evaluate_commit_cadence(commits: List[Dict[str, Any]], hackathon_start: date
     if len(in_window) >= 2:
         gaps_hr = []
         for a, b in zip(in_window, in_window[1:]):
-            gaps_hr.append((b["dt"] - a["dt"]).total_seconds() / 3600)
+            gaps_hr.append(abs((b["dt"] - a["dt"]).total_seconds() / 3600))
         avg_gap = statistics.mean(gaps_hr)
         evidence = (
             f"{len(in_window)} commits inside the window, averaging one every {avg_gap:.1f}h — "
@@ -148,7 +148,7 @@ def evaluate_author_spread(commits: List[Dict[str, Any]]) -> SignalResponse:
     )
     return SignalResponse(
         name="Author spread",
-        weight=0.10,
+        weight=0.05,
         score=score,
         evidence=evidence,
         confidence="medium"
