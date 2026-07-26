@@ -55,11 +55,33 @@ def test_analyzer_github_api_failure(mock_github_client, mock_git_client, hackat
     # The score should still compute gracefully from the remaining signals
     assert result.risk_score >= 0.0
 
-def test_analyzer_timezone_handling():
-    # Pass naive datetimes
-    naive_start = datetime(2026, 7, 24, 0, 0)
-    analyzer = RepoAnalyzer("https://github.com/owner/repo", naive_start, naive_start)
+def test_analyzer_timezone_handling(mock_github_client, mock_git_client):
+    # Ensure dt objects without tzinfo are bumped to UTC safely
+    analyzer = RepoAnalyzer(
+        "https://github.com/owner/repo",
+        datetime(2026, 7, 24),
+        datetime(2026, 7, 26, tzinfo=timezone.utc)
+    )
     assert analyzer.hackathon_start.tzinfo == timezone.utc
+    assert analyzer.hackathon_end.tzinfo == timezone.utc
+
+def test_analyzer_rejects_large_repo(mock_github_client, mock_git_client):
+    # If the metadata returns a size > 1,000,000 KB, it should throw ValueError immediately
+    mock_github_client.get_repo_metadata.return_value = {
+        "created_at": "2026-07-20T12:00:00Z",
+        "stargazers_count": 5,
+        "forks_count": 1,
+        "size": 1500000  # 1.5 GB
+    }
+    
+    analyzer = RepoAnalyzer(
+        "https://github.com/owner/repo",
+        datetime(2026, 7, 24, tzinfo=timezone.utc),
+        datetime(2026, 7, 26, tzinfo=timezone.utc)
+    )
+    
+    with pytest.raises(ValueError, match="Repository is too large"):
+        analyzer.run_analysis()
 
 def test_weighted_score_math():
     from hackguard.api.models.responses import SignalResponse
