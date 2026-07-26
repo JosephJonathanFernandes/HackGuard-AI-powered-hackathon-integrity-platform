@@ -7,6 +7,7 @@ from hackguard.api.main import app
 from hackguard.api.models.responses import AnalysisResultResponse
 
 client = TestClient(app)
+client.headers.update({"X-API-Key": "dev-key-change-me"})
 
 def test_cors_headers():
     response = client.options("/analyze", headers={
@@ -108,7 +109,7 @@ def test_batch_analyze_mixed_and_sorting():
         assert teams[1]["risk_score"] == 10.0
         
         assert teams[2]["team_name"] == "Team Fail"
-        assert teams[2]["error"] == "Failed to clone"
+        assert teams[2]["error"] == "Failed to analyze repository."
         assert teams[2]["risk_score"] is None
 
 def test_batch_analyze_concurrency():

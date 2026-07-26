@@ -1,13 +1,20 @@
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Header
 
 from hackguard.api.models.requests import AnalyzeRequest, BatchAnalyzeRequest, TeamEntry
 from hackguard.api.models.responses import AnalysisResultResponse, BatchAnalysisResponse, TeamAnalysisResult
 from hackguard.core.analyzer import RepoAnalyzer
+from hackguard.config.settings import settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/analyze", response_model=AnalysisResultResponse)
+def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != settings.api_key:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+@router.post("/analyze", response_model=AnalysisResultResponse, dependencies=[Depends(verify_api_key)])
 def analyze(req: AnalyzeRequest):
     """Analyzes a single repository and returns a risk score."""
     try:
@@ -18,8 +25,11 @@ def analyze(req: AnalyzeRequest):
             github_token=req.github_token,
         )
         return analyzer.run_analysis()
-    except Exception as e:
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Analysis failed")
+        raise HTTPException(status_code=500, detail="An internal error occurred during analysis.")
 
 
 def _analyze_one_team(entry: TeamEntry, hackathon_start, hackathon_end, github_token) -> TeamAnalysisResult:
@@ -37,13 +47,14 @@ def _analyze_one_team(entry: TeamEntry, hackathon_start, hackathon_end, github_t
             **result.model_dump()
         )
     except Exception as e:
+        logger.exception("Analysis failed for team %s", entry.team_name)
         return TeamAnalysisResult(
             team_name=entry.team_name,
             repo_url=str(entry.repo_url),
-            error=str(e)
+            error="Failed to analyze repository."
         )
 
-@router.post("/teams/analyze-batch", response_model=BatchAnalysisResponse)
+@router.post("/teams/analyze-batch", response_model=BatchAnalysisResponse, dependencies=[Depends(verify_api_key)])
 def analyze_batch(req: BatchAnalyzeRequest):
     """Analyzes multiple repositories in parallel."""
     if not req.teams:

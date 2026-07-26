@@ -48,7 +48,9 @@ class RepoAnalyzer:
             if stars_signal:
                 signals.append(stars_signal)
         except Exception as e:
-            signals.append(evaluate_repo_creation(datetime.now(), self.hackathon_start, error=str(e)))
+            import logging
+            logging.getLogger(__name__).exception("Failed to fetch Github metadata")
+            signals.append(evaluate_repo_creation(datetime.now(), self.hackathon_start, error="Could not retrieve GitHub metadata"))
 
         # 2. Local Git History
         canonical_url = f"https://github.com/{owner}/{name}.git"
