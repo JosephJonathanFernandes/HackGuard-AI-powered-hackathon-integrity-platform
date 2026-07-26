@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from hackguard.api.models.requests import AnalyzeRequest, BatchAnalyzeRequest, TeamEntry
 from hackguard.api.models.responses import AnalysisResultResponse, BatchAnalysisResponse, TeamAnalysisResult
 from hackguard.core.analyzer import RepoAnalyzer
-from hackguard.config.settings import settings
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
