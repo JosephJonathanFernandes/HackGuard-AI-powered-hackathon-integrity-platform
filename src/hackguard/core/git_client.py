@@ -1,5 +1,5 @@
 import tempfile
-import shutil
+from git.util import rmtree
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from git import Repo, GitCommandError
@@ -47,7 +47,7 @@ class GitClient:
         """Removes the temporary directory."""
         if self.repo:
             self.repo.close()
-        shutil.rmtree(self.workdir, ignore_errors=True)
+        rmtree(self.workdir)
 
     def __enter__(self):
         try:

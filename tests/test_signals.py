@@ -85,4 +85,4 @@ def test_evaluate_message_quality(mock_commit_in_window):
 
 def test_evaluate_author_spread(mock_commit_in_window):
     signal = evaluate_author_spread([mock_commit_in_window])
-    assert signal.score == 5.0
+    assert signal.score == 85.0

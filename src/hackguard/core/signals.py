@@ -141,9 +141,15 @@ def evaluate_message_quality(commits: List[Dict[str, Any]]) -> SignalResponse:
 
 def evaluate_author_spread(commits: List[Dict[str, Any]]) -> SignalResponse:
     authors = set(c["author"] for c in commits)
+    score = 85.0 if len(authors) == 1 else 5.0
+    evidence = (
+        f"Found {len(authors)} unique author(s)."
+        f" {'A single author suggests lack of team collaboration.' if len(authors) == 1 else 'Multiple authors indicate collaborative work.'}"
+    )
     return SignalResponse(
-        name="Author identity spread",
-        weight=0.05, score=5.0 if len(authors) >= 1 else 50.0,
-        evidence=f"{len(authors)} distinct commit author identity/identities detected.",
-        confidence="low — informational, not inherently risky",
+        name="Author spread",
+        weight=0.10,
+        score=score,
+        evidence=evidence,
+        confidence="medium"
     )
