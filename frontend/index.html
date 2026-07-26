@@ -67,7 +67,10 @@
 <body>
 <header>
   <h1>Hack<span>Guard</span> — Judge Dashboard</h1>
-  <div style="font-size:12px;color:var(--muted)">Risk scoring, not verdicts</div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <input id="apiKey" type="password" placeholder="HackGuard API Key" style="width: 200px; padding: 6px 10px; font-size: 12px; height: auto;">
+    <div style="font-size:12px;color:var(--muted)">Risk scoring, not verdicts</div>
+  </div>
 </header>
 <main>
   <div class="tabs">
@@ -231,7 +234,10 @@ async function runAnalysis() {
   try {
     const resp = await fetch(`${API_BASE}/analyze`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': document.getElementById('apiKey').value.trim()
+      },
       body: JSON.stringify({
         repo_url: repoUrl,
         hackathon_start: new Date(hackStart).toISOString(),
@@ -429,7 +435,10 @@ async function runBatchAnalysis() {
   try {
     const resp = await fetch(`${API_BASE}/teams/analyze-batch`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': document.getElementById('apiKey').value.trim()
+      },
       body: JSON.stringify({
         teams,
         hackathon_start: new Date(hackStart).toISOString(),
