@@ -17,13 +17,22 @@ def test_cors_headers():
     assert "access-control-allow-origin" in response.headers
 
 def test_analyze_invalid_url():
-    # Should 400, not 500
+    # Should 422 - Pydantic validation error
     response = client.post("/analyze", json={
         "repo_url": "not-a-url",
         "hackathon_start": "2026-07-24T00:00:00Z",
         "hackathon_end": "2026-07-26T00:00:00Z"
     })
-    assert response.status_code == 422 # Pydantic validation error
+    assert response.status_code == 422
+
+def test_analyze_non_github_url():
+    # Should 400 - Caught by our custom parse logic
+    response = client.post("/analyze", json={
+        "repo_url": "https://gitlab.com/owner/repo",
+        "hackathon_start": "2026-07-24T00:00:00Z",
+        "hackathon_end": "2026-07-26T00:00:00Z"
+    })
+    assert response.status_code == 400
 
 def test_analyze_happy_path():
     with patch("hackguard.api.routes.analysis.RepoAnalyzer") as MockAnalyzer:

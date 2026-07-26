@@ -45,7 +45,11 @@ class GitClient:
         shutil.rmtree(self.workdir, ignore_errors=True)
 
     def __enter__(self):
-        self.clone()
+        try:
+            self.clone()
+        except Exception:
+            self.cleanup()
+            raise
         return self
         
     def __exit__(self, exc_type, exc_val, exc_tb):
