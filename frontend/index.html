@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HackGuard — Judge Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,160 +13,201 @@
     --panel: rgba(23, 26, 35, 0.6);
     --border: rgba(255, 255, 255, 0.08);
     --border-highlight: rgba(255, 255, 255, 0.15);
-    --text: #f0f2f8; 
+    --text: #f0f2f8;
     --muted: #9ba1b3;
-    --green: #2dd4bf; 
-    --amber: #fbbf24; 
-    --red: #f87171; 
+    --green: #2dd4bf;
+    --amber: #fbbf24;
+    --red: #f87171;
     --accent: #818cf8;
     --accent-glow: rgba(129, 140, 248, 0.4);
     --font: 'Outfit', -apple-system, sans-serif;
   }
-  * { box-sizing: border-box; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-  body { 
-    margin: 0; 
-    font-family: var(--font); 
-    background: var(--bg); 
+  * { box-sizing: border-box; }
+  *:not(.bar-fill):not(.score-circle) { transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
     background-image: var(--bg-gradient);
     background-attachment: fixed;
-    color: var(--text); 
+    color: var(--text);
     min-height: 100vh;
   }
-  header { 
-    padding: 24px 32px; 
-    border-bottom: 1px solid var(--border); 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
+  a { color: var(--accent); }
+  header {
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: rgba(10, 12, 16, 0.6);
     backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
     z-index: 100;
   }
-  header h1 { font-size: 22px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
+  header h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
   header h1 span { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
-  main { max-width: 1080px; margin: 0 auto; padding: 40px 32px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
-  .tab-btn { 
-    background: transparent; 
-    color: var(--muted); 
-    border: none;
-    padding: 12px 24px; 
-    border-radius: 8px; 
-    font-size: 14px; 
-    font-weight: 500;
-    font-family: var(--font);
-    cursor: pointer; 
-    position: relative;
+  header .sub { font-size: 12px; color: var(--muted); }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px; }
+
+  /* --- settings popover --- */
+  .settings-wrap { position: relative; }
+  .icon-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .icon-btn:hover { background: rgba(255,255,255,0.1); }
+  .settings-popover { display:none; position:absolute; right:0; top:44px; width: 300px; background: #12141c; border:1px solid var(--border); border-radius: 12px; padding:16px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); z-index:200; }
+  .settings-popover.open { display:block; }
+  .settings-popover label { font-size:11px; color:var(--muted); display:block; margin: 10px 0 4px; }
+  .settings-popover label:first-child { margin-top:0; }
+  .settings-popover input { background: rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:8px; font-size:12px; width:100%; font-family: var(--font); }
+  .settings-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height:1.5; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab-btn {
+    background: transparent; color: var(--muted); border: none;
+    padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    font-family: var(--font); cursor: pointer; position: relative;
   }
   .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
   .tab-btn.active { color: var(--text); background: var(--panel); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
   .tab-panel { display: none; animation: fadeIn 0.3s ease; }
   .tab-panel.active { display: block; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  
-  .card { 
-    background: var(--panel); 
-    border: 1px solid var(--border); 
-    border-radius: 16px; 
-    padding: 28px; 
-    backdrop-filter: blur(16px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* --- shared hackathon window bar --- */
+  .window-bar {
+    display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;
+    background: var(--panel); border:1px solid var(--border); border-radius: 14px;
+    padding: 16px 20px; margin-bottom: 20px; backdrop-filter: blur(16px);
   }
-  .card:hover { border-color: var(--border-highlight); }
-  
+  .window-bar .field { flex:1; min-width:170px; }
+  .window-bar .field label { display:flex; align-items:center; gap:6px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+    padding: 28px; backdrop-filter: blur(16px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
   h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin: 0 0 20px; display: flex; align-items: center; gap: 8px; }
-  
+
   .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; align-items: flex-end; }
   label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; font-weight: 500; }
-  
-  input { 
-    background: rgba(0, 0, 0, 0.2); 
-    border: 1px solid var(--border); 
-    color: var(--text); 
-    padding: 12px 16px; 
-    border-radius: 10px; 
-    font-size: 14px; 
-    font-family: var(--font);
-    width: 100%; 
-    outline: none;
+
+  input {
+    background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border); color: var(--text);
+    padding: 12px 16px; border-radius: 10px; font-size: 14px; font-family: var(--font);
+    width: 100%; outline: none;
   }
-  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); background: rgba(0,0,0,0.4); }
+  input:focus, button:focus-visible, tr:focus-visible, .icon-btn:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
   input[type=url], input[type=text] { flex: 2; min-width: 200px; }
   input[type=datetime-local] { flex: 1; min-width: 180px; }
   .field { flex: 1; min-width: 180px; }
-  
-  button { 
-    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%); 
-    color: #fff; 
-    border: none; 
-    padding: 12px 24px; 
-    border-radius: 10px; 
-    font-weight: 600; 
-    font-size: 14px; 
-    font-family: var(--font);
-    cursor: pointer; 
-    box-shadow: 0 4px 14px var(--accent-glow);
+
+  button {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%); color: #fff; border: none;
+    padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 14px;
+    font-family: var(--font); cursor: pointer; box-shadow: 0 4px 14px var(--accent-glow);
+    display: inline-flex; align-items:center; gap:8px;
   }
-  button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--accent-glow); filter: brightness(1.1); }
-  button:active { transform: translateY(0); }
+  button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px var(--accent-glow); filter: brightness(1.1); }
+  button:active:not(:disabled) { transform: translateY(0); }
   button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
-  button.secondary:hover { background: rgba(255,255,255,0.05); border-color: var(--muted); transform: translateY(-1px); }
-  button.tiny { padding: 6px 12px; font-size: 12px; margin-top: 0; }
+  button.secondary:hover:not(:disabled) { background: rgba(255,255,255,0.05); border-color: var(--muted); transform: translateY(-1px); }
+  button.tiny { padding: 6px 12px; font-size: 12px; }
   button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; filter: none !important; box-shadow: none; }
-  
-  .score-row { display: flex; align-items: center; gap: 32px; }
-  .score-circle { 
-    width: 110px; height: 110px; 
-    border-radius: 50%; 
-    display: flex; align-items: center; justify-content: center; 
-    font-size: 36px; font-weight: 700; 
-    flex-shrink: 0; border: 4px solid; 
-    background: rgba(0,0,0,0.2);
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+  .spinner { width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; animation: spin 0.7s linear infinite; flex-shrink:0; }
+
+  .empty-state { text-align:center; padding: 48px 24px; color: var(--muted); }
+  .empty-state .glyph { font-size: 32px; margin-bottom: 12px; opacity:0.6; }
+  .empty-state p { max-width: 420px; margin: 6px auto 0; font-size: 13px; line-height:1.6; }
+
+  .score-row { display: flex; align-items: center; gap: 32px; flex-wrap:wrap; }
+  .score-circle {
+    width: 110px; height: 110px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 36px; font-weight: 700; flex-shrink: 0; border: 4px solid;
+    background: rgba(0,0,0,0.2); box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
   }
-  .score-circle.small { width: 48px; height: 48px; font-size: 16px; border-width: 3px; box-shadow: none; }
+  .score-circle.small { width: 40px; height: 40px; font-size: 14px; border-width: 3px; box-shadow: none; }
   .band { font-weight: 700; font-size: 20px; letter-spacing: 0.5px; }
+  .repo-link { font-size:12px; color: var(--muted); margin-top:4px; display:inline-flex; align-items:center; gap:4px; word-break: break-all; }
+  .repo-link:hover { color: var(--accent); }
   .disclaimer { font-size: 13px; color: var(--muted); margin-top: 16px; line-height: 1.6; border-left: 3px solid var(--accent); background: rgba(129, 140, 248, 0.05); padding: 12px 16px; border-radius: 0 8px 8px 0; }
-  
+
   .signal { padding: 16px 0; border-bottom: 1px solid var(--border); }
   .signal:last-child { border-bottom: none; padding-bottom: 0; }
-  .signal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .signal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 12px; }
   .signal-name { font-weight: 600; font-size: 15px; }
-  .signal-score { font-size: 16px; font-weight: 700; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 20px; }
+  .signal-score { font-size: 16px; font-weight: 700; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 20px; flex-shrink:0; }
   .signal-evidence { font-size: 14px; color: var(--text); line-height: 1.5; opacity: 0.9; }
   .signal-confidence { font-size: 12px; color: var(--muted); margin-top: 6px; display: inline-block; padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; }
   .bar-bg { height: 6px; background: rgba(0,0,0,0.4); border-radius: 4px; margin-top: 12px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
   .bar-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
-  
-  #status, #batchStatus { font-size: 14px; color: var(--accent); margin-top: 16px; min-height: 20px; font-weight: 500; }
+
+  #status, #batchStatus { font-size: 14px; color: var(--accent); margin-top: 16px; min-height: 20px; font-weight: 500; display:flex; align-items:center; gap:8px; }
+  #status.error, #batchStatus.error { color: var(--red); }
   .stack { display: flex; flex-direction: column; gap: 24px; }
-  
+
   .team-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
   .team-row input[type=text] { flex: 1; }
   .team-row input[type=url] { flex: 2; }
-  
+
+  /* --- leaderboard summary chips --- */
+  .summary-bar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 20px; }
+  .chip { background: rgba(0,0,0,0.25); border:1px solid var(--border); border-radius: 10px; padding: 10px 16px; min-width: 90px; }
+  .chip .n { font-size: 22px; font-weight: 700; line-height:1; }
+  .chip .l { font-size: 11px; color: var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-top:4px; }
+
+  .lb-toolbar { display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+  .lb-toolbar input[type=search] { max-width: 240px; }
+
   table { width: 100%; border-collapse: separate; border-spacing: 0; }
-  th { text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  th { text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 12px 16px; border-bottom: 1px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap; }
+  th:hover { color: var(--text); }
+  th .sort-arrow { font-size:10px; opacity:0.6; margin-left:4px; }
   td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
-  tr.team-summary-row { cursor: pointer; transition: background 0.2s; }
+  tr.team-summary-row { cursor: pointer; }
   tr.team-summary-row:hover { background: rgba(255,255,255,0.03); }
   .band-pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; }
   .error-text { color: var(--red); font-size: 13px; font-weight: 500; }
   .detail-row td { padding: 0; border: none; }
   .detail-inner { padding: 24px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); box-shadow: inset 0 4px 12px rgba(0,0,0,0.1); }
+  .expand-glyph { display:inline-block; transition: transform 0.2s ease; }
+  .expand-glyph.open { transform: rotate(90deg); }
+  .repo-cell a { color: var(--muted); font-size:12px; text-decoration:none; word-break: break-all; }
+  .repo-cell a:hover { color: var(--accent); text-decoration:underline; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Hack<span>Guard</span> — Judge Dashboard</h1>
-  <div style="display:flex; align-items:center; gap:16px;">
-    <input id="apiKey" type="password" placeholder="HackGuard API Key" style="width: 200px; padding: 6px 10px; font-size: 12px; height: auto;">
-    <div style="font-size:12px;color:var(--muted)">Risk scoring, not verdicts</div>
+  <div>
+    <h1>Hack<span>Guard</span></h1>
+    <div class="sub">Risk scoring for triage, not verdicts</div>
+  </div>
+  <div class="settings-wrap">
+    <button class="icon-btn" id="settingsBtn" onclick="toggleSettings()" aria-label="Settings" title="API key & tokens">⚙</button>
+    <div class="settings-popover" id="settingsPopover">
+      <label for="apiKey">HackGuard API key</label>
+      <input id="apiKey" type="password" placeholder="required to call the API">
+      <label for="ghToken">GitHub token (optional)</label>
+      <input id="ghToken" type="password" placeholder="ghp_... avoids rate limits">
+      <div class="settings-hint">Saved locally in this browser only — never sent anywhere except your HackGuard API.</div>
+    </div>
   </div>
 </header>
 <main>
+  <!-- SHARED HACKATHON WINDOW -->
+  <div class="window-bar">
+    <div class="field">
+      <label>Hackathon start</label>
+      <input id="globalHackStart" type="datetime-local">
+    </div>
+    <div class="field">
+      <label>Hackathon end</label>
+      <input id="globalHackEnd" type="datetime-local">
+    </div>
+    <div style="font-size:11px;color:var(--muted);max-width:220px;padding-bottom:12px;">Used for both Single Repo and Team Leaderboard analysis below.</div>
+  </div>
+
   <div class="tabs">
     <button class="tab-btn active" id="tabBtnSingle" onclick="switchTab('single')">Single Repo</button>
     <button class="tab-btn" id="tabBtnBatch" onclick="switchTab('batch')">Team Leaderboard</button>
@@ -178,23 +220,15 @@
         <h2>Analyze a submission</h2>
         <div class="form-row">
           <input id="repoUrl" type="url" placeholder="https://github.com/team/repo" value="https://github.com/octocat/Hello-World">
+          <button id="analyzeBtn" onclick="runAnalysis()">Analyze Repository</button>
         </div>
-        <div class="form-row">
-          <div class="field">
-            <label>Hackathon start</label>
-            <input id="hackStart" type="datetime-local">
-          </div>
-          <div class="field">
-            <label>Hackathon end</label>
-            <input id="hackEnd" type="datetime-local">
-          </div>
-          <div class="field">
-            <label>GitHub token (optional, avoids rate limits)</label>
-            <input id="ghToken" type="password" placeholder="ghp_...">
-          </div>
-        </div>
-        <button id="analyzeBtn" onclick="runAnalysis()">Analyze Repository</button>
         <div id="status"></div>
+      </div>
+
+      <div id="singleEmptyState" class="card empty-state">
+        <div class="glyph">🔍</div>
+        <strong>No analysis yet</strong>
+        <p>Paste a GitHub repo URL above, confirm the hackathon window, and hit Analyze. You'll get a risk score, a per-signal evidence breakdown, and a commit timeline chart.</p>
       </div>
 
       <div id="results" style="display:none;">
@@ -205,7 +239,7 @@
               <div id="scoreCircle" class="score-circle">--</div>
               <div>
                 <div id="bandText" class="band">--</div>
-                <div id="repoLabel" style="font-size:12px;color:var(--muted);margin-top:4px;">--</div>
+                <a id="repoLabel" class="repo-link" href="#" target="_blank" rel="noopener">--</a>
               </div>
             </div>
             <div id="disclaimer" class="disclaimer"></div>
@@ -231,37 +265,45 @@
       <div class="card">
         <h2>Teams</h2>
         <div id="teamRows"></div>
-        <div style="display:flex; gap:12px; align-items:center;">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
           <button class="secondary tiny" onclick="addTeamRow()">+ Add team</button>
           <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCsvUpload(event)">
           <button class="secondary tiny" onclick="document.getElementById('csvFileInput').click()">Import CSV</button>
-          <a href="#" onclick="downloadSampleCsv(event)" style="font-size:12px; color:var(--accent); text-decoration:none;">Download sample CSV</a>
+          <a href="#" onclick="downloadSampleCsv(event)" style="font-size:12px; text-decoration:none;">Download sample CSV</a>
         </div>
         <div id="csvStatus" style="font-size: 12px; color: var(--muted); margin-top: 8px;"></div>
 
-        <div class="form-row" style="margin-top:20px;">
-          <div class="field">
-            <label>Hackathon start</label>
-            <input id="batchHackStart" type="datetime-local">
-          </div>
-          <div class="field">
-            <label>Hackathon end</label>
-            <input id="batchHackEnd" type="datetime-local">
-          </div>
-          <div class="field">
-            <label>GitHub token (optional)</label>
-            <input id="batchGhToken" type="password" placeholder="ghp_...">
-          </div>
+        <div style="margin-top:20px;">
+          <button id="batchAnalyzeBtn" onclick="runBatchAnalysis()">Analyze All Teams</button>
         </div>
-        <button id="batchAnalyzeBtn" onclick="runBatchAnalysis()">Analyze All Teams</button>
         <div id="batchStatus"></div>
+      </div>
+
+      <div id="batchEmptyState" class="card empty-state">
+        <div class="glyph">🏆</div>
+        <strong>No leaderboard yet</strong>
+        <p>Add teams above (or import a CSV), confirm the shared hackathon window, then Analyze All Teams. Results are ranked by risk score with drill-down evidence per team.</p>
       </div>
 
       <div class="card" id="leaderboardCard" style="display:none;">
         <h2>Leaderboard</h2>
+
+        <div class="summary-bar" id="summaryBar"></div>
+
+        <div class="lb-toolbar">
+          <input type="search" id="lbFilter" placeholder="Filter by team name..." oninput="renderLeaderboardTable()">
+          <button class="secondary tiny" onclick="exportLeaderboardCsv()">Export CSV</button>
+        </div>
+
         <table>
           <thead>
-            <tr><th></th><th>Team</th><th>Risk</th><th>Band</th><th>Repo</th></tr>
+            <tr>
+              <th style="width:24px;"></th>
+              <th onclick="setSortHandler('team_name')">Team<span class="sort-arrow" id="arrow-team_name"></span></th>
+              <th onclick="setSortHandler('risk_score')">Risk<span class="sort-arrow" id="arrow-risk_score"></span></th>
+              <th onclick="setSortHandler('verdict_band')">Band<span class="sort-arrow" id="arrow-verdict_band"></span></th>
+              <th>Repo</th>
+            </tr>
           </thead>
           <tbody id="leaderboardBody"></tbody>
         </table>
@@ -275,6 +317,36 @@
 
 <script>
 const API_BASE = "http://localhost:8000";
+const LS_KEY = "hackguard_settings_v1";
+
+// ---------- persisted settings ----------
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+    if (saved.apiKey) document.getElementById('apiKey').value = saved.apiKey;
+    if (saved.ghToken) document.getElementById('ghToken').value = saved.ghToken;
+  } catch (e) { /* ignore corrupt storage */ }
+}
+function saveSettings() {
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    apiKey: document.getElementById('apiKey').value.trim(),
+    ghToken: document.getElementById('ghToken').value.trim(),
+  }));
+}
+document.getElementById('apiKey').addEventListener('change', saveSettings);
+document.getElementById('ghToken').addEventListener('change', saveSettings);
+loadSettings();
+
+function toggleSettings() {
+  document.getElementById('settingsPopover').classList.toggle('open');
+}
+document.addEventListener('click', (e) => {
+  const pop = document.getElementById('settingsPopover');
+  const btn = document.getElementById('settingsBtn');
+  if (pop.classList.contains('open') && !pop.contains(e.target) && e.target !== btn) {
+    pop.classList.remove('open');
+  }
+});
 
 function colorForScore(score) {
   if (score === null || score === undefined) return '#555a6b';
@@ -290,20 +362,41 @@ function switchTab(tab) {
   document.getElementById('tabBtnBatch').classList.toggle('active', tab === 'batch');
 }
 
-// default the datetime inputs to a sensible 24h window ending now
+// shared hackathon window, defaulting to a sensible last-24h
 (function initDefaults(){
   const now = new Date();
   const start = new Date(now.getTime() - 24*3600*1000);
-  const s = start.toISOString().slice(0,16);
-  const e = now.toISOString().slice(0,16);
-  document.getElementById('hackStart').value = s;
-  document.getElementById('hackEnd').value = e;
-  document.getElementById('batchHackStart').value = s;
-  document.getElementById('batchHackEnd').value = e;
+  document.getElementById('globalHackStart').value = start.toISOString().slice(0,16);
+  document.getElementById('globalHackEnd').value = now.toISOString().slice(0,16);
 })();
+
+function getWindow() {
+  return {
+    start: document.getElementById('globalHackStart').value,
+    end: document.getElementById('globalHackEnd').value,
+  };
+}
+
+function setBusy(btn, statusEl, message) {
+  btn.disabled = true;
+  statusEl.classList.remove('error');
+  statusEl.innerHTML = `<span class="spinner"></span> ${message}`;
+}
+function setError(btn, statusEl, message) {
+  btn.disabled = false;
+  statusEl.classList.add('error');
+  statusEl.textContent = message;
+}
+function clearStatus(btn, statusEl) {
+  btn.disabled = false;
+  statusEl.classList.remove('error');
+  statusEl.textContent = '';
+}
 
 let chart;
 let teamRowCount = 0;
+let leaderboardData = [];
+let sortState = { column: null, dir: 'asc' };
 
 // ---------- SINGLE REPO ----------
 
@@ -311,26 +404,27 @@ async function runAnalysis() {
   const btn = document.getElementById('analyzeBtn');
   const status = document.getElementById('status');
   const repoUrl = document.getElementById('repoUrl').value.trim();
-  const hackStart = document.getElementById('hackStart').value;
-  const hackEnd = document.getElementById('hackEnd').value;
+  const { start: hackStart, end: hackEnd } = getWindow();
+  const apiKey = document.getElementById('apiKey').value.trim();
   const ghToken = document.getElementById('ghToken').value.trim();
 
   if (!repoUrl || !hackStart || !hackEnd) {
-    status.textContent = "Fill in repo URL and hackathon window.";
+    setError(btn, status, "Fill in the repo URL and the hackathon window above.");
+    return;
+  }
+  if (!apiKey) {
+    setError(btn, status, "Set your HackGuard API key in Settings (⚙ top right) first.");
     return;
   }
 
-  btn.disabled = true;
-  status.textContent = "Cloning and analyzing repository — this can take a few seconds...";
+  setBusy(btn, status, "Cloning and analyzing repository — this can take a few seconds...");
   document.getElementById('results').style.display = 'none';
+  document.getElementById('singleEmptyState').style.display = 'none';
 
   try {
     const resp = await fetch(`${API_BASE}/analyze`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': document.getElementById('apiKey').value.trim()
-      },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({
         repo_url: repoUrl,
         hackathon_start: new Date(hackStart).toISOString(),
@@ -339,16 +433,15 @@ async function runAnalysis() {
       })
     });
     if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.detail || 'Analysis failed');
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Analysis failed (HTTP ${resp.status})`);
     }
     const data = await resp.json();
     renderResults(data);
-    status.textContent = "";
+    clearStatus(btn, status);
   } catch (e) {
-    status.textContent = "Error: " + e.message;
-  } finally {
-    btn.disabled = false;
+    document.getElementById('singleEmptyState').style.display = 'block';
+    setError(btn, status, "Error: " + e.message);
   }
 }
 
@@ -365,7 +458,9 @@ function renderResults(data) {
   document.getElementById('bandText').textContent = data.verdict_band;
   document.getElementById('bandText').style.color = color;
   document.getElementById('bandText').style.textShadow = `0 0 10px ${color}44`;
-  document.getElementById('repoLabel').textContent = data.repo_url;
+  const repoLabel = document.getElementById('repoLabel');
+  repoLabel.textContent = data.repo_url + " ↗";
+  repoLabel.href = data.repo_url;
   document.getElementById('disclaimer').textContent = data.disclaimer;
 
   document.getElementById('signals').innerHTML = signalsHtml(data.signals);
@@ -378,31 +473,28 @@ function signalsHtml(signals) {
     return `
       <div class="signal">
         <div class="signal-top">
-          <div class="signal-name">${s.name}</div>
+          <div class="signal-name">${escapeHtml(s.name)}</div>
           <div class="signal-score" style="color:${c}">${Math.round(s.score)}</div>
         </div>
-        <div class="signal-evidence">${s.evidence}</div>
-        <div class="signal-confidence">Reliability: ${s.confidence}</div>
+        <div class="signal-evidence">${escapeHtml(s.evidence)}</div>
+        <div class="signal-confidence">Reliability: ${escapeHtml(s.confidence)}</div>
         <div class="bar-bg"><div class="bar-fill" style="width:${s.score}%;background:${c}"></div></div>
       </div>`;
   }).join('');
 }
 
-function renderTimeline(timeline, canvasId, chartRefSetter) {
+function renderTimeline(timeline, canvasId) {
   const ctx = document.getElementById(canvasId).getContext('2d');
   const existing = Chart.getChart(canvasId);
   if (existing) existing.destroy();
 
   const labels = timeline.map(t => new Date(t.time).toLocaleString());
   const insertions = timeline.map(t => t.insertions);
-  const colors = timeline.map(t => t.inside_window ? '#3ecf8e' : '#ef5b5b');
+  const colors = timeline.map(t => t.inside_window ? '#2dd4bf' : '#f87171');
 
   new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [{ label: 'Lines inserted per commit', data: insertions, backgroundColor: colors, borderRadius: 4 }]
-    },
+    data: { labels, datasets: [{ label: 'Lines inserted per commit', data: insertions, backgroundColor: colors, borderRadius: 4 }] },
     options: {
       responsive: true,
       plugins: {
@@ -411,16 +503,13 @@ function renderTimeline(timeline, canvasId, chartRefSetter) {
           backgroundColor: 'rgba(10, 12, 16, 0.9)',
           titleFont: { family: 'Outfit', size: 14, weight: '600' },
           bodyFont: { family: 'Outfit', size: 13 },
-          padding: 12,
-          cornerRadius: 8,
-          callbacks: {
-            afterLabel: (item) => timeline[item.dataIndex].inside_window ? 'Inside hackathon window' : 'BEFORE hackathon window'
-          }
+          padding: 12, cornerRadius: 8,
+          callbacks: { afterLabel: (item) => timeline[item.dataIndex].inside_window ? 'Inside hackathon window' : 'BEFORE hackathon window' }
         }
       },
       scales: {
         x: { ticks: { color: '#9ba1b3', maxRotation: 60, minRotation: 60, font:{family: 'Outfit', size:11} }, grid: { display:false } },
-        y: { ticks: { color: '#9ba1b3', font:{family: 'Outfit', size:12} }, grid: { color: 'rgba(255,255,255,0.05)' }, border: { dash: [4, 4] } }
+        y: { ticks: { color: '#9ba1b3', font:{family: 'Outfit', size:12} }, grid: { color: 'rgba(255,255,255,0.05)' } }
       }
     }
   });
@@ -436,72 +525,87 @@ function addTeamRow(name = '', url = '') {
   row.className = 'team-row';
   row.id = `teamRow${id}`;
   row.innerHTML = `
-    <input type="text" placeholder="Team name" value="${name}" id="teamName${id}">
-    <input type="url" placeholder="https://github.com/team/repo" value="${url}" id="teamRepo${id}">
+    <input type="text" placeholder="Team name" value="${escapeAttr(name)}" id="teamName${id}">
+    <input type="url" placeholder="https://github.com/team/repo" value="${escapeAttr(url)}" id="teamRepo${id}">
     <button class="secondary tiny" onclick="document.getElementById('teamRow${id}').remove()">Remove</button>
   `;
   container.appendChild(row);
 }
 
-// seed with two example rows
 addTeamRow('Team Octocat', 'https://github.com/octocat/Hello-World');
 addTeamRow('Team Second', '');
 
 function downloadSampleCsv(e) {
   e.preventDefault();
   const csvContent = "team_name,repo_url\nTeam Octocat,https://github.com/octocat/Hello-World\nTeam Second,https://github.com/example/repo\n";
-  const blob = new Blob([csvContent], { type: 'text/csv' });
+  triggerDownload(csvContent, 'hackguard_teams_sample.csv');
+}
+
+function triggerDownload(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'hackguard_teams_sample.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// minimal CSV line parser that respects double-quoted fields containing commas
+function parseCsvLine(line) {
+  const out = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
 }
 
 function handleCsvUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
+  const csvStatus = document.getElementById('csvStatus');
 
   const reader = new FileReader();
   reader.onload = (e) => {
     const text = e.target.result;
     const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
     if (lines.length < 2) {
-      document.getElementById('csvStatus').textContent = "CSV appears empty or missing data.";
+      csvStatus.textContent = "CSV appears empty or missing data rows.";
       return;
     }
 
-    const header = lines[0].toLowerCase().split(',').map(s => s.trim());
+    const header = parseCsvLine(lines[0]).map(s => s.toLowerCase());
     const nameIdx = header.indexOf('team_name');
     const urlIdx = header.indexOf('repo_url');
 
     if (nameIdx === -1 || urlIdx === -1) {
-      document.getElementById('csvStatus').textContent = "CSV must have 'team_name' and 'repo_url' columns.";
+      csvStatus.textContent = "CSV must have 'team_name' and 'repo_url' columns.";
       return;
     }
 
     document.getElementById('teamRows').innerHTML = '';
     teamRowCount = 0;
-    let added = 0;
-    let skipped = 0;
+    let added = 0, skipped = 0;
 
     for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(s => s.trim());
+      const cols = parseCsvLine(lines[i]);
       const teamName = cols[nameIdx] || '';
       const repoUrl = cols[urlIdx] || '';
-
-      if (repoUrl) {
-        addTeamRow(teamName, repoUrl);
-        added++;
-      } else {
-        skipped++;
-      }
+      if (repoUrl) { addTeamRow(teamName, repoUrl); added++; }
+      else { skipped++; }
     }
-    
-    document.getElementById('csvStatus').textContent = `Imported ${added} team(s)${skipped > 0 ? `, skipped ${skipped} row(s) without a repo URL` : ''}.`;
+
+    csvStatus.textContent = `Imported ${added} team(s)${skipped > 0 ? `, skipped ${skipped} row(s) without a repo URL` : ''}.`;
     event.target.value = '';
   };
   reader.readAsText(file);
@@ -510,35 +614,34 @@ function handleCsvUpload(event) {
 async function runBatchAnalysis() {
   const btn = document.getElementById('batchAnalyzeBtn');
   const status = document.getElementById('batchStatus');
-  const hackStart = document.getElementById('batchHackStart').value;
-  const hackEnd = document.getElementById('batchHackEnd').value;
-  const ghToken = document.getElementById('batchGhToken').value.trim();
+  const { start: hackStart, end: hackEnd } = getWindow();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const ghToken = document.getElementById('ghToken').value.trim();
 
   const teams = [];
   document.querySelectorAll('#teamRows .team-row').forEach(row => {
-    const nameInput = row.querySelector('input[type=text]');
-    const urlInput = row.querySelector('input[type=url]');
-    const name = nameInput.value.trim();
-    const url = urlInput.value.trim();
+    const name = row.querySelector('input[type=text]').value.trim();
+    const url = row.querySelector('input[type=url]').value.trim();
     if (name && url) teams.push({ team_name: name, repo_url: url });
   });
 
   if (!teams.length || !hackStart || !hackEnd) {
-    status.textContent = "Add at least one team (with name + repo URL) and set the hackathon window.";
+    setError(btn, status, "Add at least one team (name + repo URL) and confirm the hackathon window above.");
+    return;
+  }
+  if (!apiKey) {
+    setError(btn, status, "Set your HackGuard API key in Settings (⚙ top right) first.");
     return;
   }
 
-  btn.disabled = true;
-  status.textContent = `Analyzing ${teams.length} team(s) in parallel — this can take a bit...`;
+  setBusy(btn, status, `Analyzing ${teams.length} team(s) in parallel — this can take a bit...`);
   document.getElementById('leaderboardCard').style.display = 'none';
+  document.getElementById('batchEmptyState').style.display = 'none';
 
   try {
     const resp = await fetch(`${API_BASE}/teams/analyze-batch`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': document.getElementById('apiKey').value.trim()
-      },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({
         teams,
         hackathon_start: new Date(hackStart).toISOString(),
@@ -547,34 +650,97 @@ async function runBatchAnalysis() {
       })
     });
     if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.detail || 'Batch analysis failed');
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `Batch analysis failed (HTTP ${resp.status})`);
     }
     const data = await resp.json();
-    renderLeaderboard(data.teams);
-    status.textContent = "";
+    leaderboardData = data.teams;
+    sortState = { column: null, dir: 'asc' }; // server already sorts risk desc by default
+    document.getElementById('leaderboardCard').style.display = 'block';
+    renderSummaryBar();
+    renderLeaderboardTable();
+    clearStatus(btn, status);
   } catch (e) {
-    status.textContent = "Error: " + e.message;
-  } finally {
-    btn.disabled = false;
+    document.getElementById('batchEmptyState').style.display = 'block';
+    setError(btn, status, "Error: " + e.message);
   }
 }
 
-function renderLeaderboard(teams) {
-  document.getElementById('leaderboardCard').style.display = 'block';
+function renderSummaryBar() {
+  const bar = document.getElementById('summaryBar');
+  const total = leaderboardData.length;
+  const errors = leaderboardData.filter(t => t.error).length;
+  const scored = leaderboardData.filter(t => !t.error);
+  const high = scored.filter(t => t.risk_score >= 65).length;
+  const medium = scored.filter(t => t.risk_score >= 35 && t.risk_score < 65).length;
+  const low = scored.filter(t => t.risk_score < 35).length;
+  const avg = scored.length ? (scored.reduce((s, t) => s + t.risk_score, 0) / scored.length) : 0;
+
+  bar.innerHTML = `
+    <div class="chip"><div class="n">${total}</div><div class="l">Teams</div></div>
+    <div class="chip"><div class="n" style="color:var(--red)">${high}</div><div class="l">High risk</div></div>
+    <div class="chip"><div class="n" style="color:var(--amber)">${medium}</div><div class="l">Medium</div></div>
+    <div class="chip"><div class="n" style="color:var(--green)">${low}</div><div class="l">Low</div></div>
+    <div class="chip"><div class="n">${scored.length ? avg.toFixed(1) : '—'}</div><div class="l">Avg risk</div></div>
+    ${errors ? `<div class="chip"><div class="n" style="color:var(--muted)">${errors}</div><div class="l">Errors</div></div>` : ''}
+  `;
+}
+
+function setSortHandler(column) {
+  if (sortState.column === column) {
+    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortState = { column, dir: column === 'risk_score' ? 'desc' : 'asc' };
+  }
+  renderLeaderboardTable();
+}
+
+function getSortedFilteredData() {
+  const filterText = document.getElementById('lbFilter').value.trim().toLowerCase();
+  let rows = leaderboardData.filter(t => !filterText || (t.team_name || '').toLowerCase().includes(filterText));
+
+  if (sortState.column) {
+    const col = sortState.column;
+    const dir = sortState.dir === 'asc' ? 1 : -1;
+    rows = [...rows].sort((a, b) => {
+      let av = a[col], bv = b[col];
+      if (col === 'risk_score') { av = av === null || av === undefined ? -1 : av; bv = bv === null || bv === undefined ? -1 : bv; }
+      else { av = (av || '').toString().toLowerCase(); bv = (bv || '').toString().toLowerCase(); }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }
+  return rows;
+}
+
+function renderLeaderboardTable() {
+  ['team_name', 'risk_score', 'verdict_band'].forEach(col => {
+    const arrow = document.getElementById(`arrow-${col}`);
+    arrow.textContent = sortState.column === col ? (sortState.dir === 'asc' ? '▲' : '▼') : '';
+  });
+
   const body = document.getElementById('leaderboardBody');
   body.innerHTML = '';
+  const rows = getSortedFilteredData();
 
-  teams.forEach((t, idx) => {
+  rows.forEach((t, idx) => {
     const summaryRow = document.createElement('tr');
     summaryRow.className = 'team-summary-row';
+    summaryRow.tabIndex = 0;
+    summaryRow.setAttribute('role', 'button');
+    summaryRow.setAttribute('aria-expanded', 'false');
+
+    const repoCell = t.repo_url
+      ? `<a href="${escapeAttr(t.repo_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHtml(t.repo_url)} ↗</a>`
+      : '';
 
     if (t.error) {
       summaryRow.innerHTML = `
-        <td>▸</td>
-        <td>${t.team_name}</td>
-        <td colspan="2"><span class="error-text">Analysis failed: ${t.error}</span></td>
-        <td style="color:var(--muted);font-size:12px;">${t.repo_url || ''}</td>
+        <td><span class="expand-glyph">▸</span></td>
+        <td>${escapeHtml(t.team_name)}</td>
+        <td colspan="2"><span class="error-text">Analysis failed: ${escapeHtml(t.error)}</span></td>
+        <td class="repo-cell">${repoCell}</td>
       `;
       body.appendChild(summaryRow);
       return;
@@ -582,17 +748,17 @@ function renderLeaderboard(teams) {
 
     const color = colorForScore(t.risk_score);
     summaryRow.innerHTML = `
-      <td>▸</td>
-      <td>${t.team_name}</td>
+      <td><span class="expand-glyph">▸</span></td>
+      <td>${escapeHtml(t.team_name)}</td>
       <td><div class="score-circle small" style="border-color:${color};color:${color}">${Math.round(t.risk_score)}</div></td>
-      <td><span class="band-pill" style="background:${color}22;color:${color}">${t.verdict_band}</span></td>
-      <td style="color:var(--muted);font-size:12px;">${t.repo_url}</td>
+      <td><span class="band-pill" style="background:${color}22;color:${color}">${escapeHtml(t.verdict_band)}</span></td>
+      <td class="repo-cell">${repoCell}</td>
     `;
 
     const detailRow = document.createElement('tr');
     detailRow.className = 'detail-row';
     detailRow.style.display = 'none';
-    const canvasId = `batchChart${idx}`;
+    const canvasId = `batchChart_${idx}_${Date.now()}`;
     detailRow.innerHTML = `
       <td colspan="5">
         <div class="detail-inner stack">
@@ -603,17 +769,36 @@ function renderLeaderboard(teams) {
     `;
 
     let expanded = false;
-    summaryRow.onclick = () => {
+    const toggle = () => {
       expanded = !expanded;
       detailRow.style.display = expanded ? 'table-row' : 'none';
-      summaryRow.firstElementChild.textContent = expanded ? '▾' : '▸';
+      summaryRow.querySelector('.expand-glyph').classList.toggle('open', expanded);
+      summaryRow.setAttribute('aria-expanded', String(expanded));
       if (expanded) renderTimeline(t.timeline, canvasId);
     };
+    summaryRow.onclick = toggle;
+    summaryRow.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } };
 
     body.appendChild(summaryRow);
     body.appendChild(detailRow);
   });
 }
+
+function exportLeaderboardCsv() {
+  const rows = getSortedFilteredData();
+  const header = 'team_name,repo_url,risk_score,verdict_band,error\n';
+  const body = rows.map(t => {
+    const esc = (v) => `"${(v === null || v === undefined ? '' : String(v)).replace(/"/g, '""')}"`;
+    return [esc(t.team_name), esc(t.repo_url), esc(t.risk_score ?? ''), esc(t.verdict_band ?? ''), esc(t.error ?? '')].join(',');
+  }).join('\n');
+  triggerDownload(header + body, 'hackguard_leaderboard.csv');
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(str) { return escapeHtml(str); }
 </script>
 </body>
 </html>
