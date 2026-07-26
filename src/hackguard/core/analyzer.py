@@ -47,6 +47,14 @@ class RepoAnalyzer:
             stars_signal = evaluate_stars_forks(stars, forks)
             if stars_signal:
                 signals.append(stars_signal)
+                
+            # GitHub returns size in KB. Reject anything > 1,000,000 KB (1 GB)
+            repo_size_kb = meta.get("size", 0)
+            if repo_size_kb > 1000000:
+                raise ValueError(f"Repository is too large for automated analysis ({repo_size_kb/1000:.1f} MB)")
+                
+        except ValueError as e:
+            raise e
         except Exception as e:
             import logging
             logging.getLogger(__name__).exception("Failed to fetch Github metadata")

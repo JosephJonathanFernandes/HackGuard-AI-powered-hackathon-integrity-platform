@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 class Settings(BaseSettings):
-    api_key: str = "dev-key-change-me"
+    api_key: str
     github_token: str | None = None
     cors_origins: List[str] = ["*"]
     
