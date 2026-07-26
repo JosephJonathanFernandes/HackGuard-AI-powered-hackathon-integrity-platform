@@ -14,8 +14,13 @@ class GitClient:
 
     def clone(self) -> None:
         """Clones the repository to a temporary directory."""
+        env = {
+            "GIT_ALLOW_PROTOCOL": "https",
+            "GIT_HTTP_LOW_SPEED_LIMIT": "1000",
+            "GIT_HTTP_LOW_SPEED_TIME": "30"
+        }
         try:
-            self.repo = Repo.clone_from(self.repo_url, self.workdir)
+            self.repo = Repo.clone_from(self.repo_url, self.workdir, env=env)
         except GitCommandError as e:
             raise RuntimeError(f"Could not clone {self.repo_url}: {e}")
 

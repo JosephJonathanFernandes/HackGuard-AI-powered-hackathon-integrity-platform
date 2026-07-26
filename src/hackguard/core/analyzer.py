@@ -51,7 +51,8 @@ class RepoAnalyzer:
             signals.append(evaluate_repo_creation(datetime.now(), self.hackathon_start, error=str(e)))
 
         # 2. Local Git History
-        with GitClient(self.repo_url) as git_client:
+        canonical_url = f"https://github.com/{owner}/{name}.git"
+        with GitClient(canonical_url) as git_client:
             commits = git_client.get_commit_stats()
 
             if not commits:
